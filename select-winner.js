@@ -1,10 +1,11 @@
 const { Client } = require('pg');
+require('dotenv').config();
 
 const client = new Client({
   user: 'postgres',
   host: '172.22.48.1',
   database: 'Giveaway',
-  password: '87vordan10',
+  password: process.env.DB_PASSWORD,
   port: 5432,
 });
 
@@ -57,7 +58,7 @@ async function selectWinner() {
 
 async function getRandomNumberApiCall(min, max) {
   const url = 'https://api.random.org/json-rpc/4/invoke';
-  const apiKey = '27d5be5f-88f5-47ca-ab85-591c5010c6c5';
+  const apiKey = process.env.API_KEY;
 
   const payload = {
     jsonrpc: '2.0',

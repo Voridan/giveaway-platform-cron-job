@@ -1,2 +1,3 @@
 /node_modules
 from-wsl-towindows-postgres
+.env
