@@ -1,50 +1,39 @@
-const { Client } = require('pg');
+const { MongoClient } = require('mongodb');
 require('dotenv').config();
 
-const client = new Client({
-  user: 'postgres',
-  host: '172.22.48.1',
-  database: 'Giveaway',
-  password: process.env.DB_PASSWORD,
-  port: 5432,
-});
+const uri = process.env.MONGO_REMOTE_URI;
+const client = new MongoClient(uri);
+
+const dbName = 'test';
+const database = client.db(dbName);
+const collection = 'giveawaydocuments';
 
 async function selectWinner() {
   try {
     await client.connect();
-    const endedWithoutWinner = await client.query(`
-        SELECT id
-        FROM giveaway
-        WHERE giveaway.ended = TRUE AND "winnerId" IS null
-      `);
+    const giveawaysCollection = database.collection(collection);
+    const endedGiveaways = await giveawaysCollection
+      .find({
+        ended: true,
+        winner: null,
+      })
+      .project({ participants: 1 })
+      .toArray();
 
-    if (endedWithoutWinner.rows.length) {
-      for (const giveaway of endedWithoutWinner.rows) {
-        const participants = await client.query(
-          `
-            SELECT id
-            FROM participant
-            WHERE "giveawayId" = $1
-            ORDER BY id ASC
-          `,
-          [giveaway.id]
-        );
-        if (participants.rows.length) {
-          const rows = participants.rows;
-          const min = participants.rows[0].id;
-          const max = participants.rows[rows.length - 1].id;
-          const winnerId = await getRandomNumberApiCall(min, max);
-
-          await client.query(
-            `
-              UPDATE giveaway
-              SET "winnerId" = $1
-              WHERE id = $2
-            `,
-            [winnerId, giveaway.id]
+    if (endedGiveaways.length !== 0) {
+      for (const giveaway of endedGiveaways) {
+        const { participants } = giveaway;
+        if (participants.length !== 0) {
+          const min = 0;
+          const max = participants.length - 1;
+          const winnerIdx = await getRandomNumberApiCall(min, max);
+          const winner = participants[winnerIdx];
+          await giveawaysCollection.updateOne(
+            { _id: giveaway._id },
+            { $set: { winner } }
           );
           console.log(
-            `Giveaway ${giveaway.id}: Winner selected - Participant ${winnerId}`
+            `Giveaway ${giveaway.id}: Winner selected - Participant ${winner}`
           );
         }
       }
@@ -52,7 +41,7 @@ async function selectWinner() {
   } catch (error) {
     console.error(error);
   } finally {
-    await client.end();
+    await client.close();
   }
 }
 
