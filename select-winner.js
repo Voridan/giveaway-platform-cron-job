@@ -1,5 +1,9 @@
+const fs = require('fs/promises');
+const path = require('path');
 const { Client } = require('pg');
-require('dotenv').config();
+require('dotenv').config({
+  path: path.join(__dirname, '.env')
+});
 
 const client = new Client({
   user: 'postgres',
