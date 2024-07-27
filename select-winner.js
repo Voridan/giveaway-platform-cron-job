@@ -1,6 +1,9 @@
+const fs = require('fs/promises');
+const path = require('path');
 const { MongoClient } = require('mongodb');
-require('dotenv').config();
-
+require('dotenv').config({
+  path: path.join(__dirname, '.env')
+});
 const uri = process.env.MONGO_REMOTE_URI;
 const client = new MongoClient(uri);
 
@@ -32,18 +35,19 @@ async function selectWinner() {
             { _id: giveaway._id },
             { $set: { winner } }
           );
-          console.log(
-            `Giveaway ${giveaway.id}: Winner selected - Participant ${winner}`
-          );
+          await logToFile(`Giveaway ${giveaway.id}: Winner selected - Participant ${winner}`);
         }
       }
     }
   } catch (error) {
+    await logToFile(error.message);
     console.error(error);
   } finally {
     await client.close();
   }
 }
+
+selectWinner();
 
 async function getRandomNumberApiCall(min, max) {
   const url = 'https://api.random.org/json-rpc/4/invoke';
@@ -73,4 +77,11 @@ async function getRandomNumberApiCall(min, max) {
   return data.result.random.data[0];
 }
 
-selectWinner();
+async function logToFile(message) {
+  try {
+    const logFilePath = path.join(__dirname, 'application.log');
+    await fs.appendFile(logFilePath, `${new Date().toISOString()} - ${message}\n`);
+  } catch (err) {
+    console.error('Failed to write log:', err);
+  }
+}
