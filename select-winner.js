@@ -47,18 +47,18 @@ async function selectWinner() {
             `,
             [winnerId, giveaway.id]
           );
-          console.log(
-            `Giveaway ${giveaway.id}: Winner selected - Participant ${winnerId}`
-          );
+          await logToFile(`Giveaway ${giveaway.id}: Winner selected - Participant ${winnerId}`);
         }
       }
     }
   } catch (error) {
+    await logToFile(error.message);
     console.error(error);
   } finally {
     await client.end();
   }
 }
+selectWinner();
 
 async function getRandomNumberApiCall(min, max) {
   const url = 'https://api.random.org/json-rpc/4/invoke';
@@ -88,4 +88,11 @@ async function getRandomNumberApiCall(min, max) {
   return data.result.random.data[0];
 }
 
-selectWinner();
+async function logToFile(message) {
+  try {
+    const logFilePath = join(__dirname, 'application.log');
+    await fs.appendFile(logFilePath, `${new Date().toISOString()} - ${message}\n`);
+  } catch (err) {
+    console.error('Failed to write log:', err);
+  }
+}
